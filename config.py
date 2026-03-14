@@ -15,7 +15,6 @@ class Config:
             self.encoder_channels = [32, 64, 128]
             self.decoder_channels = kwargs.get("decoder_channels", [128, 64, 32])
             self.codebook_size = kwargs.get("codebook_size", 64)
-            self.rq_levels = kwargs.get("rq_levels", 3)
         else:
             self.img_size = 64
             self.channels = 3
@@ -23,7 +22,6 @@ class Config:
             self.encoder_channels = [64, 128, 256, 512]
             self.decoder_channels = kwargs.get("decoder_channels", [512, 256, 128, 64])
             self.codebook_size = kwargs.get("codebook_size", 512)
-            self.rq_levels = kwargs.get("rq_levels", 3)
 
         self.train_split = kwargs.get("train_split", 0.8)
         self.wandb_project = kwargs.get("wandb_project", "ece285-fpvae")

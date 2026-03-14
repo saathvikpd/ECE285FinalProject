@@ -4,7 +4,6 @@ from .metrics import (
     codebook_entropy,
     codebook_proportion_used,
     gini_coefficient,
-    rq_level_entropy,
     gather_codebook_usage,
 )
 
@@ -14,6 +13,5 @@ __all__ = [
     "codebook_entropy",
     "codebook_proportion_used",
     "gini_coefficient",
-    "rq_level_entropy",
     "gather_codebook_usage",
 ]

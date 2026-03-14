@@ -29,22 +29,6 @@ def generate_vq(model, n, device):
     return model.decode(z_q)
 
 
-def generate_rq(model, n, device):
-    if model.h == 1 and model.w == 1:
-        z_q = torch.zeros(n, model.latent_dim, device=device)
-        for l in range(model.n_levels):
-            idx = torch.randint(0, model.codebook_size, (n,), device=device)
-            z_q = z_q + model.embeddings[l](idx)
-        return model.decode(z_q)
-    b, h, w = n, model.h, model.w
-    z_q = torch.zeros(b, model.latent_dim, h, w, device=device)
-    for l in range(model.n_levels):
-        idx = torch.randint(0, model.codebook_size, (b * h * w,), device=device)
-        e = model.embeddings[l](idx).view(b, h, w, model.latent_dim).permute(0, 3, 1, 2)
-        z_q = z_q + e
-    return model.decode(z_q)
-
-
 def run_fid_is(model, model_name, val_loader, device, cfg):
     from ignite.engine import Engine
     from ignite.metrics import FID, InceptionScore
@@ -57,10 +41,8 @@ def run_fid_is(model, model_name, val_loader, device, cfg):
         with torch.no_grad():
             if model_name == "vae":
                 fake = generate_vae(model, n, device)
-            elif model_name == "vq_vae":
-                fake = generate_vq(model, n, device)
             else:
-                fake = generate_rq(model, n, device)
+                fake = generate_vq(model, n, device)
         real_299 = to_299(x, channels, device)
         fake_299 = to_299(fake, channels, device)
         return real_299, fake_299

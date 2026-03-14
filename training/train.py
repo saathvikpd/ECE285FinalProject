@@ -4,9 +4,9 @@ from torch.optim import Adam
 from torchvision.utils import save_image
 
 from data import build_mnist_loaders, build_abo_loaders
-from models import VAE, VQVAE, RQVAE
+from models import VAE, VQVAE
 from evaluation import metrics
-from evaluation.fid_is import run_fid_is, generate_vae, generate_vq, generate_rq
+from evaluation.fid_is import run_fid_is, generate_vae, generate_vq
 
 
 def train(cfg, model_name, dataset_name):
@@ -20,10 +20,8 @@ def train(cfg, model_name, dataset_name):
 
     if model_name == "vae":
         model = VAE(cfg)
-    elif model_name == "vq_vae":
-        model = VQVAE(cfg)
     else:
-        model = RQVAE(cfg)
+        model = VQVAE(cfg)
     model = model.to(device)
     if getattr(torch, "compile", None) is not None:
         model = torch.compile(model, mode="reduce-overhead")
@@ -46,7 +44,7 @@ def train(cfg, model_name, dataset_name):
         wandb.define_metric("train_loss_breakdown/*", step_metric="epoch")
         wandb.define_metric("val_loss_breakdown/*", step_metric="epoch")
 
-    track_loss_breakdown = model_name in ("vq_vae", "rq_vae")
+    track_loss_breakdown = model_name == "vq_vae"
 
     for epoch in range(1, cfg.epochs + 1):
         model.train()
@@ -124,28 +122,14 @@ def train(cfg, model_name, dataset_name):
             log_dict["Proportion active dimensions"] = proportion_active
             line = f"epoch {epoch} train_loss {train_loss:.4f} val_loss {val_loss:.4f} val_kl {kl:.4f} active_dims {active} proportion_active {proportion_active:.4f}\n"
         else:
-            counts = metrics.gather_codebook_usage(
-                model, val_loader, device, getattr(model, "n_levels", 1)
-            )
-            if len(counts) == 1:
-                ent = metrics.codebook_entropy(counts[0])
-                prop_used = metrics.codebook_proportion_used(counts[0])
-                gini = metrics.gini_coefficient(counts[0])
-                log_dict["Codebook entropy"] = ent
-                log_dict["Codebook proportion used"] = prop_used
-                log_dict["Codebook Gini"] = gini
-                line = f"epoch {epoch} train_loss {train_loss:.4f} val_loss {val_loss:.4f} codebook_entropy {ent:.4f} codebook_proportion_used {prop_used:.4f} codebook_gini {gini:.4f}\n"
-            else:
-                ents = metrics.rq_level_entropy(counts)
-                prop_used_list = [metrics.codebook_proportion_used(c) for c in counts]
-                gini_list = [metrics.gini_coefficient(c) for c in counts]
-                for i, e in enumerate(ents):
-                    log_dict[f"Codebook entropy L{i}"] = e
-                for i, p in enumerate(prop_used_list):
-                    log_dict[f"Codebook proportion used L{i}"] = p
-                for i, g in enumerate(gini_list):
-                    log_dict[f"Codebook Gini L{i}"] = g
-                line = f"epoch {epoch} train_loss {train_loss:.4f} val_loss {val_loss:.4f} rq_level_entropies {ents} codebook_proportion_used {prop_used_list} codebook_gini {gini_list}\n"
+            counts = metrics.gather_codebook_usage(model, val_loader, device)
+            ent = metrics.codebook_entropy(counts[0])
+            prop_used = metrics.codebook_proportion_used(counts[0])
+            gini = metrics.gini_coefficient(counts[0])
+            log_dict["Codebook entropy"] = ent
+            log_dict["Codebook proportion used"] = prop_used
+            log_dict["Codebook Gini"] = gini
+            line = f"epoch {epoch} train_loss {train_loss:.4f} val_loss {val_loss:.4f} codebook_entropy {ent:.4f} codebook_proportion_used {prop_used:.4f} codebook_gini {gini:.4f}\n"
         log_file.write(line)
         log_file.flush()
         print(line.strip())
@@ -159,10 +143,8 @@ def train(cfg, model_name, dataset_name):
             with torch.no_grad():
                 if model_name == "vae":
                     samples = generate_vae(model, n_show, device)
-                elif model_name == "vq_vae":
-                    samples = generate_vq(model, n_show, device)
                 else:
-                    samples = generate_rq(model, n_show, device)
+                    samples = generate_vq(model, n_show, device)
             samples = (samples + 1) / 2.0
             samples = torch.clamp(samples, 0, 1)
             img_path = os.path.join(img_dir, f"{dataset_name}_{model_name}_{epoch}.png")
@@ -192,17 +174,10 @@ def train(cfg, model_name, dataset_name):
         active = metrics.active_latent_dims(mu_all)
         line = f"val_kl {kl:.4f} active_dims {active}\n"
     else:
-        counts = metrics.gather_codebook_usage(
-            model, val_loader, device, getattr(model, "n_levels", 1)
-        )
-        ent = metrics.codebook_entropy(counts[0]) if len(counts) == 1 else None
-        if ent is not None:
-            gini = metrics.gini_coefficient(counts[0])
-            line = f"codebook_entropy {ent:.4f} codebook_gini {gini:.4f}\n"
-        else:
-            ents = metrics.rq_level_entropy(counts)
-            gini_list = [metrics.gini_coefficient(c) for c in counts]
-            line = f"rq_level_entropies {ents} codebook_gini {gini_list}\n"
+        counts = metrics.gather_codebook_usage(model, val_loader, device)
+        ent = metrics.codebook_entropy(counts[0])
+        gini = metrics.gini_coefficient(counts[0])
+        line = f"codebook_entropy {ent:.4f} codebook_gini {gini:.4f}\n"
     log_file.write(line)
     log_file.flush()
     print(line.strip())

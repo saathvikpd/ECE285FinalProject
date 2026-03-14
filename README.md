@@ -1,10 +1,10 @@
 # Collapse in continuous vs discrete latent spaces
 
-Analyzing latent collapse in variational auto-encoder models: VAE, VQ-VAE, and RQ-VAE on MNIST and ABO.
+Analyzing latent collapse in variational auto-encoder models: VAE and VQ-VAE on MNIST and ABO.
 
 ## What's included
 
-- Models: VAE, VQ-VAE, RQ-VAE (encoder-decoder with configurable channels and latent size).
+- Models: VAE, VQ-VAE (encoder-decoder with configurable channels and latent size).
 - Data: MNIST (28x28 grayscale) and ABO (64x64 RGB). Loaders in `data/`.
 - Training: `training/train.py` trains a given model on a dataset, logs reconstruction/KL (and VQ losses), active latent dims, and optionally FID/IS via wandb.
 - Config: `config.py` defines defaults per dataset (MNIST vs ABO) and exposes `get_mnist_config()` and `get_abo_config()`.
