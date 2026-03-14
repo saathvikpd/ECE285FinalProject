@@ -51,35 +51,3 @@ class Decoder(nn.Module):
 
     def forward(self, x):
         return self.conv(x)
-
-
-class EncoderFC(nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim):
-        super().__init__()
-        dims = [input_dim] + list(hidden_dims) + [output_dim]
-        layers = []
-        for i in range(len(dims) - 1):
-            layers.append(nn.Linear(dims[i], dims[i + 1]))
-            if i < len(dims) - 2:
-                layers.append(nn.ReLU(inplace=True))
-        self.net = nn.Sequential(*layers)
-
-    def forward(self, x):
-        return self.net(x)
-
-
-class DecoderFC(nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim):
-        super().__init__()
-        dims = [input_dim] + list(hidden_dims) + [output_dim]
-        layers = []
-        for i in range(len(dims) - 1):
-            layers.append(nn.Linear(dims[i], dims[i + 1]))
-            if i < len(dims) - 2:
-                layers.append(nn.ReLU(inplace=True))
-        layers.append(nn.Tanh())
-        self.net = nn.Sequential(*layers)
-        self.output_dim = output_dim
-
-    def forward(self, x):
-        return self.net(x)

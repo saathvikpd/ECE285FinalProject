@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 
 
 def gather_codebook_usage(model, loader, device, n_levels=1):
@@ -20,10 +19,6 @@ def gather_codebook_usage(model, loader, device, n_levels=1):
                     counts[l].scatter_add_(0, idx, torch.ones_like(idx, dtype=torch.float, device=device))
                     r = r - e
     return counts
-
-
-def reconstruction_mse(recon, target):
-    return F.mse_loss(recon, target).item()
 
 
 def kl_divergence(mu, logvar):
@@ -66,20 +61,3 @@ def gini_coefficient(usage_counts):
 
 def rq_level_entropy(level_counts_list):
     return [codebook_entropy(c) for c in level_counts_list]
-
-
-def rq_residual_contribution(model, loader, device):
-    model.eval()
-    contributions = [0.0] * model.n_levels
-    n = 0
-    with torch.no_grad():
-        for x, _ in loader:
-            x = x.to(device)
-            z = model.encode(x)
-            r = z
-            for l in range(model.n_levels):
-                e, _ = model.quantize_level(r, model.embeddings[l])
-                contributions[l] += (e ** 2).sum().item()
-                r = r - e
-            n += x.size(0)
-    return [c / max(n, 1) for c in contributions]

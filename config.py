@@ -1,6 +1,3 @@
-import os
-
-
 class Config:
     def __init__(self, dataset="mnist", **kwargs):
         self.seed = kwargs.get("seed", 42)
